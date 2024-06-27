@@ -1,5 +1,4 @@
 from .._client import SyncAPIClient
-from ..models.disposablemail import Email, Message, Mailbox
 
 
 class DisposableMail(SyncAPIClient):
@@ -8,13 +7,11 @@ class DisposableMail(SyncAPIClient):
     def __init__(self) -> None:
         super().__init__(base_url=self._base_url)
 
-    def get_email(self) -> Email:
-        data = self.get("/index/index").json()
-        return Email.from_dict(data)
+    def get_email(self) -> dict[str, str]:
+        return self.get("/index/index").json()
 
-    def get_mailbox(self) -> Mailbox:
-        data = self.get("/index/refresh").json()
-        return Mailbox.from_list(data)
+    def get_mailbox(self) -> list[dict[str, object]]:
+        return self.get("/index/refresh").json()
 
     def get_message(self, message_id: int) -> str:
         return self.get(f"/email/id/{message_id}").text
