@@ -1,7 +1,5 @@
 from typing import TypeVar, Generic, Mapping
-
 import httpx
-
 from ._constants import DEFAULT_TIMEOUT
 
 HttpxClientT = TypeVar("HttpxClientT", bound=[httpx.Client, httpx.AsyncClient])
@@ -33,7 +31,7 @@ class BaseClient(Generic[HttpxClientT]):
     def _prepare_url(self, url: str | httpx.URL) -> httpx.URL:
         merge_url = httpx.URL(url)
         if merge_url.is_relative_url:
-            merge_raw_path = self.base_url.raw_path + merge_url.raw_path.lstrip(b"/")
+            merge_raw_path = self.base_url.raw_path + merge_url.raw_path
             return self.base_url.copy_with(raw_path=merge_raw_path)
         return merge_url
 
@@ -51,11 +49,10 @@ class BaseClient(Generic[HttpxClientT]):
         url: str | httpx.URL,
         **kwargs,
     ) -> httpx.Request:
-        headers = self._prepare_headers(kwargs.get("headers"))
         return self._client.build_request(
             method=method,
             url=self._prepare_url(url),
-            headers=headers,
+            headers=self._prepare_headers(kwargs.get("headers")),
             timeout=self._timeout,
             **kwargs,
         )
