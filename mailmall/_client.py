@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, Mapping
+from typing import TypeVar, Generic, Mapping, Dict, Any
 import httpx
 from ._constants import DEFAULT_TIMEOUT
 
@@ -31,17 +31,24 @@ class BaseClient(Generic[HttpxClientT]):
     def _prepare_url(self, url: str | httpx.URL) -> httpx.URL:
         merge_url = httpx.URL(url)
         if merge_url.is_relative_url:
-            merge_raw_path = self.base_url.raw_path + merge_url.raw_path
+            merge_raw_path = self.base_url.raw_path + merge_url.raw_path.lstrip(b"/")
             return self.base_url.copy_with(raw_path=merge_raw_path)
         return merge_url
 
     def _prepare_headers(
         self,
         headers: Mapping[str, str] | None = None
-    ) -> dict[str, str]:
+    ) -> Dict[str, str]:
         pre_headers = headers or {}
         pre_headers.update({**self.default_headers, **self._custom_headers})
         return httpx.Headers(pre_headers)
+
+    def _build_payload(self, options: Dict[str, Any]) -> Dict[str, str]:
+        return {
+            key: value
+            for key, value in options.items()
+            if key != "self" and value is not None
+        }
 
     def _build_request(
         self,
@@ -49,11 +56,12 @@ class BaseClient(Generic[HttpxClientT]):
         url: str | httpx.URL,
         **kwargs,
     ) -> httpx.Request:
+        headers = self._prepare_headers(kwargs.get("headers"))
         return self._client.build_request(
             method=method,
-            url=self._prepare_url(url),
-            headers=self._prepare_headers(kwargs.get("headers")),
+            headers=headers,
             timeout=self._timeout,
+            url=self._prepare_url(url),
             **kwargs,
         )
 
@@ -68,11 +76,11 @@ class BaseClient(Generic[HttpxClientT]):
         )
 
     @property
-    def auth_headers(self) -> dict[str, str]:
+    def auth_headers(self) -> Dict[str, str]:
         return {}
 
     @property
-    def default_headers(self) -> dict[str, str]:
+    def default_headers(self) -> Dict[str, str]:
         return {
             "Accept": "application/json,text/html;q=0.9",
             "Content-Type": "application/json",
